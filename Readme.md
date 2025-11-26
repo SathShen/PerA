@@ -22,7 +22,7 @@ All pre-training data should be organized under a single folder. Images within a
 The RSRSD-5m dataset can be downloaded from [here](https://github.com/SathShen/RSRSD-5m) (google drive link) or [here](https://drive.google.com/file/d/1-y5_y3_y9-y6-y6-y6-y6/view?usp=sharing) (Baidu Netdisk link).
 
 
-## 4. Pretraining the model
+## 4. Pre-train the model
 The pre-trained ViT-G/16-1024 weights of PerA can be downloaded from [here](https://drive.google.com/file/d/1-y5_y3_y9-y6-y6-y6-y6/view?usp=sharing) (Google Drive link) or [here](https://pan.baidu.com/s/1-y5_y3_y9-y6-y6-y6-y6) (Baidu Netdisk link). 
 
 Run in the terminal, please adjust the command as needed, please use the recommended config file located in the “Configs” folder to ensure the program runs properly.Pretrain you model using following command:
