@@ -1,5 +1,3 @@
-import sys
-sys.path.append('../')
 import argparse
 import torch
 from tqdm import tqdm
@@ -47,10 +45,6 @@ def pretrain(cfg, frame, pretrain_dataset, logger):
                 frame.loss_dict[k] = v / len(train_data_loader_iter)
         dist.barrier()
 
-        if (epoch + 1) % cfg.KNN_FREQ == 0 or epoch == cfg.NUM_EPOCHS - 1:
-            frame.knn_eval()
-        dist.barrier()
-
         # gather all losses
         with torch.no_grad():
             def sync_loss(loss):
@@ -59,7 +53,7 @@ def pretrain(cfg, frame, pretrain_dataset, logger):
                 mean_loss = (sum(all_losses_list) / len(all_losses_list)).item()
                 return mean_loss
             epoch_mean_loss = sync_loss(train_epoch_loss)
-            if cfg.NET.NAME == 'dinov2' or cfg.NET.NAME == 'dinov2smuc' or cfg.NET.NAME == 'pera':
+            if cfg.NET.NAME == 'dinov2' or cfg.NET.NAME == 'pera':
                 loss_dict = {}
                 for k, v in frame.loss_dict.items():
                     mean_loss = sync_loss(v)
@@ -102,26 +96,14 @@ def pretrain(cfg, frame, pretrain_dataset, logger):
                         f'mean_loss: {epoch_mean_loss:.3f}, best_mean_loss: {frame.best_mean_loss:.3f}, '
                         f'lr: {frame.learning_rate:.2e}, wd:{frame.weight_decay:.2e}, '
                         f'teacher_temp:{frame.teacher_temperature:.3f}, teacher_mom:{frame.teacher_momentum:.3f}')
-            if ((epoch + 1) % cfg.KNN_FREQ == 0 or epoch == cfg.NUM_EPOCHS - 1) and frame.knn_top1acc != -1:
-                logger.info(f'knn_top1acc: {frame.knn_top1acc:.3f}, knn_top5acc: {frame.knn_top5acc:.3f}, '
-                      f'best_knn_top1acc: {frame.best_knn_top1acc:.3f}, best_knn_top5acc: {frame.best_knn_top5acc:.3f}')
-            if cfg.NET.NAME == 'dinov2' or cfg.NET.NAME == 'dinov2smuc' or cfg.NET.NAME == 'pera':
+            if cfg.NET.NAME == 'dinov2' or cfg.NET.NAME == 'pera':
                 logger.info(", ".join([f'{k}: {v}' for k, v in loss_dict.items()]) + '\n')
         dist.barrier()
-
-
-        # early stopping for search
-        # if epoch == 99:
-        #     sys.exit(0)
-
-
     
     total_timer.stop()
     logger.info(f'[Rank {global_rank}] train_time: {epoch_timer.get_sumtime()}, '
                   f'{pretrain_dataset.__len__() * (cfg.NUM_EPOCHS - cfg.START_EPOCH) / epoch_timer.sum():.2f}examples/sec, '
                   f'total_time: {total_timer.get_sumtime()}, best_mean_loss: {frame.best_mean_loss:.3f}')
-    if frame.knn_top1acc != -1:
-        logger.info(f'best_knn_top1acc: {frame.best_knn_top1acc:.3f}, best_knn_top5acc: {frame.best_knn_top5acc:.3f}')
     logger.info('[Rank {global_rank}] Finish!')
 
 
@@ -139,7 +121,6 @@ def get_parserargs():
     parser.add_argument('--seed', '-s', type=int, help='random seed')
 
     # train setting
-    parser.add_argument('--knn_freq', '-kf', type=int, help='KNN evaluation frequency, every x epochs')
     parser.add_argument('--save_freq', '-sf', type=int, help='Save checkpoint every x epochs.')
     parser.add_argument('--num_epochs', '-e', metavar='E', type=int, help='Number of training epochs')
     parser.add_argument('--freeze_last_layer_epochs', '-flle', type=int, help="""Number of epochs during which we keep the output layer fixed. 
@@ -156,8 +137,6 @@ def get_parserargs():
     # ==============data setting=============
     parser.add_argument('--input_size', '-is', metavar='IS', type=int, help='Input size of image')
     parser.add_argument('--pretrain_data_path', '-pdp', type=str, help='Pretrain dataset abspath for pretraining')
-    parser.add_argument('--train_data_path', '-tp', type=str, help='Training dataset abspath for knn evaluation')
-    parser.add_argument('--valid_data_path', '-vp', type=str, help='Validation dataset abspath for knn evaluation')
     parser.add_argument('--num_workers', '-w', metavar='NW', type=int, help='number of workers in dataloader')
     parser.add_argument('--batch_size_per_gpu', '-b', type=int, help='Batch size per gpu')
     parser.add_argument('--is_pin_memory', '-pm', metavar='PM', default=True, help='is pin memory in dataloader')
@@ -201,25 +180,8 @@ def get_parserargs():
     parser.add_argument('--net_mlp_ratio', '-nmr', type=float, help='mlp ratio')
     parser.add_argument('--net_in_chans', '-nic', type=int, help='Input channels for the network, 3 for RGB, 1 for grayscale')
 
-    # dino
-    parser.add_argument('--net_dino_is_norm_last_layer', '-ndinll', help="""Not normalizing leads to better performance but can make the training unstable. 
-                        we typically set False with small and True with base.""")
-    parser.add_argument('--net_dino_is_bn_in_head', '-ndibin', help="Whether to use batch normalizations in projection head (Default: False)")
-    parser.add_argument('--net_dino_num_head_layers', '-ndnhl', type=int, help='Number of layers in the projection head.')
-    parser.add_argument('--net_dino_head_hidden_dim', '-ndhhd', type=int, help='Hidden dimension of the projection head.')
-    parser.add_argument('--net_dino_head_bottleneck_dim', '-ndhbd', type=int, help='Bottleneck dimension of the projection head.')
-    parser.add_argument('--net_dino_head_out_dim', '-ndhod', type=int, help="""Output dimension of the projection head.
-                        For complex and large datasets large values (like 65k) work well""")
-    parser.add_argument('--net_dino_centering', '-ndc', default='centering', help='centering or sinkhorn_knopp')
-    
-    parser.add_argument('--net_pera_mae_loss_weight', '-npmw', type=float, help='mae loss weight for pera')
-
     
     # ==========optimization setting==========
-    # loss setting
-    parser.add_argument('--loss_name', '-l', metavar='L', type=str,
-                        help='Loss function name, Dice, DiceBCE, SoftIoU, Focal, CE, BCE...')
-    
     # optimizer setting
     parser.add_argument('--optim_name', '-o', metavar='O', type=str, help='Optimizer name, sgd, adam, rmsprop, adamw...')
     parser.add_argument('--optim_momentum', '- omm', metavar='OMM', type=float, help='beta of optimize momentum vt, some optimizer do not need')

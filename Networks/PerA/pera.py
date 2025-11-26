@@ -45,20 +45,6 @@ class PerA(nn.Module):
                                   nlayers=cfg.NET.DINO.NUM_HEAD_LAYERS, 
                                   hidden_dim=cfg.NET.DINO.HEAD_HIDDEN_DIM, 
                                   bottleneck_dim=cfg.NET.DINO.HEAD_BOTTLENECK_DIM)
-        # S_patch_head = PerA_patch_head(in_dim=cfg.NET.EMBED_DIM, 
-        #                             out_dim=cfg.NET.DINO.HEAD_OUT_DIM,
-        #                             use_bn=False, 
-        #                             nlayers=cfg.NET.DINO.NUM_HEAD_LAYERS, 
-        #                             hidden_dim=cfg.NET.DINO.HEAD_HIDDEN_DIM, 
-        #                             bottleneck_dim=cfg.NET.DINO.HEAD_BOTTLENECK_DIM
-        #                           )
-        # T_patch_head = PerA_patch_head(in_dim=cfg.NET.EMBED_DIM, 
-        #                             out_dim=cfg.NET.DINO.HEAD_OUT_DIM,
-        #                             use_bn=False, 
-        #                             nlayers=cfg.NET.DINO.NUM_HEAD_LAYERS, 
-        #                             hidden_dim=cfg.NET.DINO.HEAD_HIDDEN_DIM, 
-        #                             bottleneck_dim=cfg.NET.DINO.HEAD_BOTTLENECK_DIM
-        #                           )
         
         self.pred_head = PerA_pixel_head(in_dim=cfg.NET.EMBED_DIM, 
                                     out_dim=cfg.NET.PATCH_SIZE ** 2 * 3,
@@ -81,9 +67,6 @@ class PerA(nn.Module):
         
         # teacher and student start with the same weights
         self.teacher.load_state_dict(self.student.state_dict())
-        # self.teacher.backbone.load_state_dict(self.student.backbone.state_dict())
-        # self.teacher.cls_head.load_state_dict(self.student.cls_head.state_dict())
-        # self.teacher.patch_head.proj_head.load_state_dict(self.student.patch_head.proj_head.state_dict())
 
         for p in self.teacher.parameters():
             p.requires_grad = False
@@ -177,16 +160,10 @@ class PerA(nn.Module):
         
         t_global_cls_tokens = t_global_backbone_output[:, 0]
         t_local_cls_tokens = t_local_backbone_output[:, 0]
-        # t_global_patch_tokens = t_global_backbone_output[:, 1:]
-        # t_local_patch_tokens = t_local_backbone_output[:, 1:]
         
         t_global_cls_tokens_after_head = self.teacher.cls_head(t_global_cls_tokens)
         t_local_cls_tokens_after_head = self.teacher.cls_head(t_local_cls_tokens)
 
-        # t_global_patch_tokens_after_head = self.teacher.patch_head(t_global_patch_tokens)
-        # t_local_patch_tokens_after_head = self.teacher.patch_head(t_local_patch_tokens)
-      
-        # return t_global_cls_tokens_after_head, t_global_patch_tokens_after_head, t_local_cls_tokens_after_head, None
         return t_global_cls_tokens_after_head, None, t_local_cls_tokens_after_head, None
 
     def forward(self, images):
@@ -198,7 +175,7 @@ class PerA(nn.Module):
         s_global_input, t_global_input, l_patches, s_global_target, cs_mask_ofcsl = self.mask_patch_pair_embed(s_global_crops, t_global_crops, is_global=True)
         s_local_input, t_local_input, _, _, _ = self.mask_patch_pair_embed(s_local_crops, t_local_crops, is_global=False)
 
-        t_global_cls_tokens_after_head, t_global_patch_tokens_after_head, t_local_cls_tokens_after_head, t_local_patch_tokens_after_head = self.teacher_nogard_forward(
+        t_global_cls_tokens_after_head, _, t_local_cls_tokens_after_head, _ = self.teacher_nogard_forward(
             t_global_input, t_local_input)
         
         x = [s_global_input, s_local_input]
@@ -216,34 +193,27 @@ class PerA(nn.Module):
         
         s_global_cls_tokens = s_global_backbone_output[:, 0]
         s_local_cls_tokens = s_local_backbone_output[:, 0]
-        # s_l_global_patch_tokens = s_global_backbone_output[:, 1:]
-        # s_local_patch_tokens = s_local_backbone_output[:, 1:]
+
 
         s_global_pred_tokens = s_global_backbone_output[~cs_mask_ofcsl].view(
             (s_global_backbone_output.shape[0], -1, s_global_backbone_output.shape[-1]))  # remove s part of patches
-        # s_global_patch_tokens = s_l_global_patch_tokens[s_mask_ofsl].view(
-        #     (s_l_global_patch_tokens.shape[0], -1, s_l_global_patch_tokens.shape[-1]))  # remove l part of patches
+
         
         s_global_cls_tokens_after_head = self.student.cls_head(s_global_cls_tokens)
         s_local_cls_tokens_after_head = self.student.cls_head(s_local_cls_tokens)
 
-        # s_global_patch_tokens_after_head = self.student.patch_head(s_global_patch_tokens)
-        # s_local_patch_tokens_after_head = self.student.patch_head(s_local_patch_tokens)
 
         s_global_pred_tokens_after_head = self.pred_head(s_global_pred_tokens)
 
         student_output = dict()
         student_output['local_cls_tokens'] = s_local_cls_tokens_after_head
         student_output['global_cls_tokens'] = s_global_cls_tokens_after_head
-        # student_output['local_patch_tokens'] = s_local_patch_tokens_after_head
-        # student_output['global_patch_tokens'] = s_global_patch_tokens_after_head
+
         student_output['global_pred_tokens'] = s_global_pred_tokens_after_head
         student_output['global_patch_target'] = s_global_target
 
         teacher_output = dict()
         teacher_output['local_cls_tokens'] = t_local_cls_tokens_after_head
         teacher_output['global_cls_tokens'] = t_global_cls_tokens_after_head
-        # teacher_output['local_patch_tokens'] = t_local_patch_tokens_after_head
-        # teacher_output['global_patch_tokens'] = t_global_patch_tokens_after_head
 
         return student_output, teacher_output

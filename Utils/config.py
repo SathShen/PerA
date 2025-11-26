@@ -25,25 +25,12 @@ base_cfg.WORLD_SIZE = 1
 base_cfg.SEED = 10
 base_cfg.IS_BENCHMARK = True
 
-base_cfg.KNN_FREQ = 10
 base_cfg.SAVE_FREQ = 10
 base_cfg.NUM_EPOCHS = 200
 base_cfg.FREEZE_LAST_LAYER_EPOCHS = 0  # dinov1
-base_cfg.DTYPE = 'fp16'      # DET smooth_l1_loss in faster rcnn still not supported bfloat16 in PyTorch 2.0.1, we use float32 instead
+base_cfg.DTYPE = 'fp16'
 base_cfg.GRADIENT_CLIPPING = 3.0
 base_cfg.GRADIENT_ACCUMULATION_STEPS = 1
-
-# evaluate
-base_cfg.IS_EVAL = False
-base_cfg.IS_SAVE_PRED = False
-base_cfg.IS_DETAILED = False
-base_cfg.IS_VISUALIZE_ONLY = False
-base_cfg.IS_INFERENCE = False
-
-# distill
-base_cfg.DISTILL = CN()
-base_cfg.DISTILL.IS_DISTILL = False
-base_cfg.DISTILL.STUDENT_ARCH = 'vitb'
 
 # no need to set
 base_cfg.START_EPOCH = 0
@@ -95,9 +82,6 @@ base_cfg.AUG.LOCAL_CROP_SIZE = 96
 base_cfg.AUG.LOCAL_SCALE = (0.05, 0.4)
 base_cfg.AUG.LOCAL_RATIO = (0.75, 1.33)
 
-# shift per for smuc
-base_cfg.AUG.SHIFT_PER = (-0.25, 0.25)
-
 # -----------------------------------------------------------------------------
 # Net settings
 # -----------------------------------------------------------------------------
@@ -113,16 +97,6 @@ base_cfg.NET.NUM_HEADS = 16
 base_cfg.NET.MLP_RATIO = 4.                # mlp hidden layers ratio
 base_cfg.NET.IN_CHANS = 3
 
-
-# Swin Transformer parameters
-# img_size要被patch_size整除, 除出来的patch_solution要被window_size整除
-base_cfg.NET.SWIN = CN()
-base_cfg.NET.SWIN.DEPTHS = [2, 2, 6, 2]         # num of blocks in stages
-base_cfg.NET.SWIN.NUM_HEADS = [3, 6, 12, 24]    # multi-heads
-base_cfg.NET.SWIN.WINDOW_SIZE = 7               # size of window
-base_cfg.NET.SWIN.IS_QKV_BIAS = True
-base_cfg.NET.SWIN.IS_APE = False
-base_cfg.NET.SWIN.IS_PATCH_NORM = True
 
 # Dino parameters
 base_cfg.NET.DINO = CN()
@@ -152,36 +126,12 @@ base_cfg.NET.MOCO.HEAD_HIDDEN_DIM = 4096
 base_cfg.NET.MOCO.HEAD_OUT_DIM = 256
 
 
-# vit-adapter parameters
-base_cfg.NET.ADAPTER = CN()
-base_cfg.NET.ADAPTER.CONV_INPLANE = 64
-base_cfg.NET.ADAPTER.NUM_POINTS = 4
-base_cfg.NET.ADAPTER.DEFORM_NUM_HEADS = 6
-base_cfg.NET.ADAPTER.INIT_VALUES = 0.
-base_cfg.NET.ADAPTER.INTERACTION_INDEXES = [[0, 5], [6, 11], [12, 17], [18, 23]] # for 24 layers vit-l
-base_cfg.NET.ADAPTER.IS_WITH_CFFN = True
-base_cfg.NET.ADAPTER.CFFN_RATIO = 0.25
-base_cfg.NET.ADAPTER.DEFORM_RATIO = 1.0
-base_cfg.NET.ADAPTER.IS_ADD_VIT_FEATURE = True
-base_cfg.NET.ADAPTER.IS_USE_EXTRA_EXTRACTOR = True
-base_cfg.NET.ADAPTER.IS_USE_CHECKPOINT = False
-
-
-base_cfg.NET.SWIN.QK_SCALE = None
-
-
 # -----------------------------------------------------------------------------
 # Optimization settings
 # -----------------------------------------------------------------------------
 base_cfg.LOSS = CN()
 base_cfg.LOSS.NAME = 'focal'
 base_cfg.LOSS.IS_AVERAGE = True
-# [DiceBCE] a, b
-base_cfg.LOSS.A = 0.8
-base_cfg.LOSS.B = 0.2
-# [Focal] alpha, gamma
-base_cfg.LOSS.ALPHA = 0.25
-base_cfg.LOSS.GAMMA = 2.
 
 
 # Optimizer
@@ -241,65 +191,6 @@ base_cfg.TT_SCHEDULER.IS_RESTART = False
 base_cfg.TT_SCHEDULER.T_0 = 10
 base_cfg.TT_SCHEDULER.T_MULT = 2
 
-# -----------------------------------------------------------------------------
-# Finetune settings
-# -----------------------------------------------------------------------------
-base_cfg.FINETUNE = CN()
-base_cfg.FINETUNE.IS_FINETUNE = False
-base_cfg.FINETUNE.IS_LOAD_BACKBONE_ONLY = True
-base_cfg.FINETUNE.TYPE = 'ic'             # ic: Image Classification, seg: Semantic Segmentation, det: Object Detection, cd: change detection
-base_cfg.FINETUNE.NUM_EPOCHS = 10
-base_cfg.FINETUNE.BACKBONE = 'vit'       # FIXME: net_name 和 net_type 按 backbone
-base_cfg.FINETUNE.IS_FROZEN_BACKBONE = True
-
-# image classification
-
-base_cfg.FINETUNE.IC = CN()
-base_cfg.FINETUNE.IC.HEAD = 'mlp'            
-base_cfg.FINETUNE.IC.LOSS = 'ce'
-base_cfg.FINETUNE.IC.NUM_DEPTH = 1
-base_cfg.FINETUNE.IC.LABEL_DEPTH = 1
-base_cfg.FINETUNE.IC.HIDDEN_CHANNELS = 512
-base_cfg.FINETUNE.IC.NUM_LAYERS = 1
-base_cfg.FINETUNE.IC.NUM_CLASSES = 2
-base_cfg.FINETUNE.IC.IS_PATCH_INPUT = False  # patch input to linear layer, usually works worse than only cls with vit
-base_cfg.FINETUNE.IC.DEFAULT_METRIC = 'top1acc'
-
-# semantic segmentation
-base_cfg.FINETUNE.SEG = CN()
-base_cfg.FINETUNE.SEG.HEAD = 'uper'           
-base_cfg.FINETUNE.SEG.LOSS = 'ce'
-base_cfg.FINETUNE.SEG.CLASS_LIST = [0, 255]
-base_cfg.FINETUNE.SEG.HIDDEN_CHANNELS = 512
-base_cfg.FINETUNE.SEG.OUT_CHANNELS = 256
-base_cfg.FINETUNE.SEG.NUM_CLASSES = 2
-base_cfg.FINETUNE.SEG.NUM_LAYERS = 4
-base_cfg.FINETUNE.SEG.DEFAULT_METRIC = 'mf1'
-
-# object detection
-base_cfg.FINETUNE.DET = CN()
-base_cfg.FINETUNE.DET.HEAD = 'off_frcnn'        
-base_cfg.FINETUNE.DET.LOSS = 'id'
-base_cfg.FINETUNE.DET.HIDDEN_CHANNELS = 1024
-base_cfg.FINETUNE.DET.NUM_CLASSES = 2
-base_cfg.FINETUNE.DET.NUM_LAYERS = 4
-base_cfg.FINETUNE.DET.ROI_SIZE = 7
-base_cfg.FINETUNE.DET.DEFAULT_METRIC = 'map50'
-
-# change detection
-base_cfg.FINETUNE.CD = CN()
-base_cfg.FINETUNE.CD.HEAD = 'fcn'
-base_cfg.FINETUNE.CD.LOSS = 'ce'
-base_cfg.FINETUNE.CD.CLASS_LIST = [0, 255]
-base_cfg.FINETUNE.CD.HIDDEN_CHANNELS = 512
-base_cfg.FINETUNE.CD.OUT_CHANNELS = 256
-base_cfg.FINETUNE.CD.MASK_ID = 0   # for multi-class change detection
-base_cfg.FINETUNE.CD.NUM_CLASSES = 2
-base_cfg.FINETUNE.CD.NUM_LAYERS = 4
-base_cfg.FINETUNE.CD.DEFAULT_METRIC = 'mf1'
-
-
-
 
 
 def bool_flag(str):
@@ -332,11 +223,8 @@ def none_flag(str):
 
 
 def norm_path(path):
-    # 将所有的 '\' 替换为 '/'
     path = path.replace('\\', '/')
-    # 将所有的 '\\' 替换为 '/'
     path = path.replace('\\\\', '/')
-    # 将所有的 '//' 替换为 '/'
     path = path.replace('//', '/')
     if path[-1] == '/':
         path = path[:-1]
@@ -346,7 +234,7 @@ def norm_path(path):
 def _update_config_from_file(config, cfg_file):
     with open(cfg_file, 'r') as f:
         yaml_cfg = yaml.load(f, Loader=yaml.FullLoader)
-    config.merge_from_file(cfg_file)   # 从文件合并到config中
+    config.merge_from_file(cfg_file)
 
 
 def update_config(config, args):
@@ -360,7 +248,7 @@ def update_config(config, args):
     if _check_args('cfg_path'):
         cfg_path = none_flag(args.cfg_path)
         if cfg_path != None:
-            assert os.path.exists(cfg_path), "配置文件路径不存在，退出程序！"
+            assert os.path.exists(cfg_path), "The config file does not exist. Program exiting!"
             _update_config_from_file(config, cfg_path)
             config.CFG_PATH = norm_path(cfg_path)
 
@@ -404,9 +292,6 @@ def update_config(config, args):
     if _check_args('is_benchmark'):
         config.IS_BENCHMARK = bool_flag(args.is_benchmark)
 
-
-    if _check_args('knn_freq'):
-        base_cfg.KNN_FREQ = args.knn_freq
     if _check_args('save_freq'):
         config.SAVE_FREQ = args.save_freq
     if _check_args('num_epochs'):
@@ -462,12 +347,6 @@ def update_config(config, args):
         config.DATA.IS_PIN_MEMORY = bool_flag(args.is_pin_memory)
     if _check_args('ignore_index'):
         config.DATA.IGNORE_INDEX = args.ignore_index
-
-    if _check_args('disill_is_distill'):
-        config.DISTILL.IS_DISTILL = bool_flag(args.disill_is_distill)
-    if _check_args('distill_student_arch'):
-        config.DISTILL.STUDENT_ARCH = args.distill_student_arch
-
 
     if _check_args('is_aug'):
         config.AUG.IS_AUG = bool_flag(args.is_aug)
@@ -530,22 +409,7 @@ def update_config(config, args):
         config.NET.MLP_RATIO = args.net_mlp_ratio
     if _check_args('net_in_chans'):
         config.NET.IN_CHANS = args.net_in_chans
-    
 
-     # swin
-    if _check_args('net_swin_depths'):
-        config.NET.SWIN.DEPTHS = args.net_swin_depths
-    if _check_args('net_swin_num_heads'):
-        config.NET.SWIN.NUM_HEADS = args.net_swin_num_heads
-    if _check_args('net_swin_window_size'):
-        config.NET.SWIN.WINDOW_SIZE = args.net_swin_window_size
-
-    if _check_args('net_swin_is_qkv_bias'):
-        config.NET.SWIN.IS_QKV_BIAS = bool_flag(args.net_swin_is_qkv_bias)
-    if _check_args('net_swin_is_ape'):
-        config.NET.SWIN.IS_APE = bool_flag(args.net_swin_is_ape)
-    if _check_args('net_swin_is_patch_norm'):
-        config.NET.SWIN.IS_PATCH_NORM = bool_flag(args.net_swin_is_patch_norm)
     
     # dino
     if _check_args('net_dino_is_norm_last_layer'):      # only dinov1
@@ -577,49 +441,14 @@ def update_config(config, args):
         config.NET.PERA.MAE_LOSS_WEIGHT = args.net_pera_mae_loss_weight
 
 
-    if _check_args('net_ada_conv_inplane'):
-        config.NET.ADAPTER.CONV_INPLANE = args.net_ada_conv_inplane
-    if _check_args('net_ada_num_points'):
-        config.NET.ADAPTER.NUM_POINTS = args.net_ada_num_points
-    if _check_args('net_ada_deform_num_heads'):
-        config.NET.ADAPTER.DEFORM_NUM_HEADS = args.net_ada_deform_num_heads
-    if _check_args('net_ada_init_values'):
-        config.NET.ADAPTER.INIT_VALUES = args.net_ada_init_values
-    if _check_args('net_ada_interaction_indexes'):
-        config.NET.ADAPTER.INTERACTION_INDEXES = args.net_ada_interaction_indexes
-    elif _check_args("is_finetune") and bool_flag(args.is_finetune):
-        d = config.NET.DEPTH
-        s = config.NET.DEPTH // config.NET.ADAPTER.NUM_POINTS
-        config.NET.ADAPTER.INTERACTION_INDEXES = [[x, x + s - 1] for x in range(0, d, s)]
-    if _check_args('net_ada_is_with_cffn'):
-        config.NET.ADAPTER.IS_WITH_CFFN = bool_flag(args.net_ada_is_with_cffn)
-    if _check_args('net_ada_cffn_ratio'):
-        config.NET.ADAPTER.CFFN_RATIO = args.net_ada_cffn_ratio
-    if _check_args('net_ada_deform_ratio'):
-        config.NET.ADAPTER.DEFORM_RATIO = args.net_ada_deform_ratio
-    if _check_args('net_ada_is_add_vit_feature'):
-        config.NET.ADAPTER.IS_ADD_VIT_FEATURE = bool_flag(args.net_ada_is_add_vit_feature)
-    if _check_args('net_ada_is_use_extra_extractor'):
-        config.NET.ADAPTER.IS_USE_EXTRA_EXTRACTOR = bool_flag(args.net_ada_is_use_extra_extractor)
-    if _check_args('net_ada_is_use_checkpoint'):
-        config.NET.ADAPTER.IS_USE_CHECKPOINT = bool_flag(args.net_ada_is_use_checkpoint)
 
     
     # loss setting
     if _check_args('loss_name'):
-        config.LOSS.NAME = none_flag(args.loss_name.lower())
-    elif (not _check_args('is_finetune')) and (not config.FINETUNE.IS_FINETUNE):
         config.LOSS.NAME = none_flag(config.NET.NAME.lower())
     if _check_args('loss_is_average'):
         config.LOSS.IS_AVERAGE = bool_flag(args.loss_is_average)
-    if _check_args('loss_dicebce_a'):
-        config.LOSS.A = args.loss_dicebce_a
-    if _check_args('loss_dicebce_b'):
-        config.LOSS.B = args.loss_dicebce_b
-    if _check_args('loss_focal_alpha'):
-        config.LOSS.ALPHA = args.loss_focal_alpha
-    if _check_args('loss_focal_gamma'):
-        config.LOSS.GAMMA = args.loss_focal_gamma
+
 
     # optimizer setting
     if _check_args('optim_name'):
@@ -705,84 +534,6 @@ def update_config(config, args):
         config.TT_SCHEDULER.T_0 = args.tts_T_0
     if _check_args('tts_T_mult'):
         config.TT_SCHEDULER.T_MULT = args.tts_T_mult
-
-
-    if _check_args('is_finetune'):
-        config.FINETUNE.IS_FINETUNE = bool_flag(args.is_finetune)
-    if _check_args('is_load_backbone_only'):
-        config.FINETUNE.IS_LOAD_BACKBONE_ONLY = bool_flag(args.is_load_backbone_only)
-    if _check_args('finetune_type'):
-        config.FINETUNE.TYPE = none_flag(args.finetune_type)
-    if _check_args('finetune_num_epochs'):
-        config.FINETUNE.NUM_EPOCHS = args.finetune_num_epochs
-    if _check_args('finetune_backbone'):
-        config.FINETUNE.BACKBONE = none_flag(args.finetune_backbone.lower())
-    if _check_args('finetune_is_frozen_backbone'):
-        config.FINETUNE.IS_FROZEN_BACKBONE = bool_flag(args.finetune_is_frozen_backbone)
-
-    if _check_args('finetune_ic_head'):
-        config.FINETUNE.IC.HEAD = none_flag(args.finetune_ic_head.lower())
-    if _check_args('finetune_ic_loss'):
-        config.FINETUNE.IC.LOSS = none_flag(args.finetune_ic_loss.lower())
-    if _check_args('finetune_ic_num_depth'):
-        config.FINETUNE.IC.NUM_DEPTH = args.finetune_ic_num_depth
-    if _check_args('finetune_ic_label_depth'):
-        config.FINETUNE.IC.LABEL_DEPTH = args.finetune_ic_label_depth
-    if _check_args('finetune_ic_hidden_channels'):
-        config.FINETUNE.IC.HIDDEN_CHANNELS = args.finetune_ic_hidden_channels
-    if _check_args('finetune_ic_num_layers'):
-        config.FINETUNE.IC.NUM_LAYERS = args.finetune_ic_num_layers
-    if _check_args('finetune_ic_is_patch_input'):
-        config.FINETUNE.IC.IS_PATCH_INPUT = bool_flag(args.finetune_ic_is_patch_input)
-    if _check_args('finetune_ic_default_metric'):
-        config.FINETUNE.IC.DEFAULT_METRIC = args.finetune_ic_default_metric.lower()
-
-    if _check_args('finetune_seg_head'):
-        config.FINETUNE.SEG.HEAD = none_flag(args.finetune_seg_head.lower())
-    if _check_args('finetune_seg_loss'):
-        config.FINETUNE.SEG.LOSS = none_flag(args.finetune_seg_loss.lower())
-    if _check_args('finetune_seg_class_list'):
-        config.FINETUNE.SEG.CLASS_LIST = args.finetune_seg_class_list
-        config.FINETUNE.SEG.NUM_CLASSES = len(config.FINETUNE.SEG.CLASS_LIST)
-    if _check_args('finetune_seg_num_layers'):
-        config.FINETUNE.SEG.NUM_LAYERS = args.finetune_seg_num_layers
-    if _check_args('finetune_seg_hidden_channels'):
-        config.FINETUNE.SEG.HIDDEN_CHANNELS = args.finetune_seg_hidden_channels
-    if _check_args('finetune_seg_out_channels'):
-        config.FINETUNE.SEG.OUT_CHANNELS = args.finetune_seg_out_channels
-    if _check_args('finetune_seg_default_metric'):
-        config.FINETUNE.SEG.DEFAULT_METRIC = args.finetune_seg_default_metric.lower()
-
-
-    if _check_args('finetune_det_head'):
-        config.FINETUNE.DET.HEAD = none_flag(args.finetune_det_head.lower())
-    if _check_args('finetune_det_loss'):
-        config.FINETUNE.DET.LOSS = none_flag(args.finetune_det_loss.lower())
-    if _check_args('finetune_det_hidden_channels'):
-        config.FINETUNE.DET.HIDDEN_CHANNELS = args.finetune_det_hidden_channels
-    if _check_args('finetune_det_num_layers'):
-        config.FINETUNE.DET.NUM_LAYERS = args.finetune_det_num_layers
-    if _check_args('finetune_det_roi_size'):
-        config.FINETUNE.DET.ROI_SIZE = args.finetune_det_roi_size
-    if _check_args('finetune_det_default_metric'):
-        config.FINETUNE.DET.DEFAULT_METRIC = args.finetune_det_default_metric.lower()
-
-    if _check_args('finetune_cd_head'):
-        config.FINETUNE.CD.HEAD = none_flag(args.finetune_cd_head.lower())
-    if _check_args('finetune_cd_loss'):
-        config.FINETUNE.CD.LOSS = none_flag(args.finetune_cd_loss.lower())
-    if _check_args('finetune_cd_class_list'):
-        config.FINETUNE.CD.CLASS_LIST = args.finetune_cd_class_list
-        config.FINETUNE.CD.NUM_CLASSES = len(config.FINETUNE.CD.CLASS_LIST)
-    if _check_args('finetune_cd_hidden_channels'):
-        config.FINETUNE.CD.HIDDEN_CHANNELS = args.finetune_cd_hidden_channels
-    if _check_args('finetune_cd_mask_id'):
-        config.FINETUNE.CD.MASK_ID = args.finetune_cd_mask_id
-    if _check_args('finetune_cd_num_layers'):
-        config.FINETUNE.CD.NUM_LAYERS = args.finetune_cd_num_layers
-    if _check_args('finetune_cd_default_metric'):
-        config.FINETUNE.CD.DEFAULT_METRIC = args.finetune_cd_default_metric.lower()
-
     
     if _check_args('dtype'):
         config.DTYPE = none_flag(args.dtype)
@@ -812,34 +563,21 @@ def save_config(config):
         f.write(config.dump())
 
 def get_output_path(cfg, mode='Pretrain'):
-    if mode == 'Pretrain' or mode == 'Distill':
-        dataset = (cfg.DATA.PRETRAIN_DATA_PATH).split('/')[-1]
-    elif mode == 'Finetune':
-        dataset = (cfg.DATA.TRAIN_DATA_PATH).split('/')[-2]
-    elif mode == 'Evaluate' or mode == 'Inference':
-        dataset = (cfg.DATA.TEST_DATA_PATH).split('/')[-2]
-    else:
-        raise ValueError("mode should be in ['Pretrain', 'Finetune', 'Evaluate', 'Distill', 'Inference']")
+    dataset = (cfg.DATA.PRETRAIN_DATA_PATH).split('/')[-1]
     
     num_resume = 0
-    if mode != 'Evaluate' and mode != 'Inference':
-        if cfg.IS_RESUME:
-            src_output_path = ('/'.join(cfg.OUTPUT_PATH.split('/')[:-1]))
-            num_resume = len([w for w in os.listdir(src_output_path) if os.path.isdir(os.path.join(src_output_path, w))])
-            if num_resume == 0:
-                print("No previous checkpoints found. Fail to resume training.")
-                sys.exit(1)
-            else:
-                print(f"Found {num_resume} previous restart checkpoints. This is the {num_resume + 1}th restart, restart epoch: {cfg.START_EPOCH}.")
-                output_path = os.path.join(src_output_path, f"Run{num_resume + 1}")
+    if cfg.IS_RESUME:
+        src_output_path = ('/'.join(cfg.OUTPUT_PATH.split('/')[:-1]))
+        num_resume = len([w for w in os.listdir(src_output_path) if os.path.isdir(os.path.join(src_output_path, w))])
+        if num_resume == 0:
+            print("No previous checkpoints found. Fail to resume training.")
+            sys.exit(1)
         else:
-            output_path = os.path.join(cfg.OUTPUT_PATH, mode, cfg.NET.NAME, dataset, 
-                                    f"{cfg.CFG_NOTE}_{time.strftime('%y%m%d%H%M%S')}", f"Run{num_resume + 1}")
-            if os.path.exists(output_path):
-                print(f"Output path {output_path} already exists, please wait for a moment.")
-                sys.exit(1)
+            print(f"Found {num_resume} previous restart checkpoints. This is the {num_resume + 1}th restart, restart epoch: {cfg.START_EPOCH}.")
+            output_path = os.path.join(src_output_path, f"Run{num_resume + 1}")
     else:
-        output_path = os.path.join(cfg.OUTPUT_PATH, 'Evaluate', cfg.NET.NAME, dataset, f"{cfg.CFG_NOTE}_{time.strftime('%y%m%d%H%M%S')}")
+        output_path = os.path.join(cfg.OUTPUT_PATH, mode, cfg.NET.NAME, dataset, 
+                                f"{cfg.CFG_NOTE}_{time.strftime('%y%m%d%H%M%S')}", f"Run{num_resume + 1}")
         if os.path.exists(output_path):
             print(f"Output path {output_path} already exists, please wait for a moment.")
             sys.exit(1)
@@ -849,170 +587,48 @@ def get_output_path(cfg, mode='Pretrain'):
 def check_config(cfg, logger):
     is_exit = False
 
-    if cfg.IS_EVAL:
-        if cfg.CFG_PATH is None:
-            logger.warning("测试模式，但配置文件路径为空，请确认配置文件路径，程序将退出")
-            is_exit = True
-        if cfg.PRETRAIN_PATH is None:
-            logger.warning("测试模式，但模型路径为空，请确认模型路径，程序将退出")
-            is_exit = True
-        if cfg.CFG_PATH is not None and cfg.PRETRAIN_PATH is not None:
-            logger.warning("测试模式，正确加载模型权重与配置文件")
+    # Pretrain config check
+    if cfg.CFG_PATH is None:
+        logger.warning("The config file path is empty. Please verify that the pre-training uses the default config.")
 
-    elif cfg.FINETUNE.IS_FINETUNE:
-        if cfg.CFG_PATH is None:
-            logger.warning("微调模式，但配置文件路径为空，请确认训练使用默认配置")
-        if cfg.PRETRAIN_PATH is None:
-            if cfg.IS_RESUME:
-                logger.warning("微调模式恢复训练，但模型路径为空，请确认模型路径，程序将退出")
-                is_exit = True
-            else:
-                logger.warning("微调模式，但预训练模型路径为空，训练将从随机初始化开始")
-        else:
-            if len(os.path.split(cfg.PRETRAIN_PATH)[-1].split('_')) == 4:
-                if cfg.IS_RESUME:
-                    if cfg.FINETUNE.IS_LOAD_BACKBONE_ONLY:
-                        logger.warning("微调模式恢复训练，但仅加载骨干网络，设置冲突，请设置-ibb参数为False，程序将退出")
-                        is_exit = True
-                    else:
-                        logger.warning("微调模式恢复训练，使用原有模型继续训练")
-                else:
-                    if cfg.FINETUNE.IS_LOAD_BACKBONE_ONLY:
-                        logger.warning("仅加载预训练模型骨干网络，微调将从头开始")
-                    else:
-                        logger.warning("加载完整网络模型，但是并未使用恢复训练模式，微调将从头开始")
-            else:
-                logger.warning("模型路径不规范，请检查路径，程序将退出")
-                is_exit = True
-    elif cfg.DISTILL.IS_DISTILL:
-        if cfg.CFG_PATH is None:
-            logger.warning("蒸馏模式，但配置文件路径为空，请确认配置路径，程序将退出")
-            is_exit = True
-        elif cfg.PRETRAIN_PATH is None:
-            logger.warning("蒸馏模式，但模型路径为空，请确认模型路径，程序将退出")
+    if cfg.PRETRAIN_PATH is None:
+        if cfg.IS_RESUME:
+            logger.warning("Resume training mode, but the pre-trained model path is empty. Please verify the pre-trained model path. The program will exit.")
             is_exit = True
         else:
-            if cfg.IS_RESUME:
-                logger.warning("蒸馏模式恢复训练, 将使用原有模型继续训练")
-            else:
-                logger.warning("蒸馏模式，将使用预训练模型蒸馏训练")
-        
+            logger.warning("The pre-trained model path is empty; training will start from scratch.")
     else:
-        # 预训练模式
-        if cfg.CFG_PATH is None:
-            logger.warning("配置文件路径为空，请确认预训练使用默认配置")
-
-        if cfg.PRETRAIN_PATH is None:
+        if len(os.path.split(cfg.PRETRAIN_PATH)[-1].split('_')) == 4:
             if cfg.IS_RESUME:
-                logger.warning("恢复训练模式，但预训练模型路径为空，请确认预训练模型路径，程序将退出")
-                is_exit = True
+                logger.warning("Resume training mode and continue training using the pre-trained model.")
             else:
-                logger.warning("预训练模型路径为空，训练将从头开始")
-        else:
-            if len(os.path.split(cfg.PRETRAIN_PATH)[-1].split('_')) == 4:
-                if cfg.IS_RESUME:
-                    logger.warning("恢复训练模式，使用预训练模型继续训练")
-                else:
-                    logger.warning("预训练模型路径符合要求，但是并未使用恢复训练模式，训练将从头开始")
-                
-            else:
-                logger.warning("预训练模型路径不符合要求，请检查路径，程序将退出")
-                is_exit = True
-
+                logger.warning("Resume training mode was not used, training will start from scratch.")
+            
 
     if cfg.OUTPUT_PATH is None:
-        logger.warning("输出路径为空，请设置输出路径，程序将退出")
+        logger.warning("The output path is empty. Please set an output path, the program will exit.")
         is_exit = True
     else:
-        if not cfg.IS_EVAL:
-            if cfg.IS_RESUME:
-                logger.warning("恢复训练模式，输出路径将被覆盖为上次训练的输出路径")
+        if cfg.IS_RESUME:
+            logger.warning("Resume training mode, and the output path will be overwritten with the output path from the last training.")
 
-    if cfg.IS_EVAL:
-        if not os.path.exists(cfg.DATA.TEST_DATA_PATH):
-            logger.warning("测试集路径不存在，程序将退出")
-            is_exit = True
-    else:
-        if cfg.FINETUNE.IS_FINETUNE:
-            if not os.path.exists(cfg.DATA.TRAIN_DATA_PATH):
-                logger.warning("训练集路径不存在，程序将退出")
-                is_exit = True
 
-            if not os.path.exists(cfg.DATA.VALID_DATA_PATH):
-                logger.warning("验证集路径不存在，程序将退出")
-                is_exit = True
-        else:
-            if cfg.DISTILL.IS_DISTILL:
-                if not os.path.exists(cfg.DATA.PRETRAIN_DATA_PATH):
-                    logger.warning("训练集路径不存在，程序将退出")
-                    is_exit = True
-            else:
-                if not os.path.exists(cfg.DATA.PRETRAIN_DATA_PATH):
-                    logger.warning("预训练数据集路径不存在，程序将退出")
-                    is_exit = True
-
-                if not os.path.exists(cfg.DATA.TRAIN_DATA_PATH):
-                    logger.warning("训练集路径不存在，程序将不进行K-NN评估")
-
-                if not os.path.exists(cfg.DATA.VALID_DATA_PATH):
-                    logger.warning("验证集路径不存在，程序将不进行K-NN评估")
+    if not os.path.exists(cfg.DATA.PRETRAIN_DATA_PATH):
+        logger.warning("The pre-training dataset path does not exist. The program will exit.")
+        is_exit = True
 
 
     if cfg.NET.NAME is None:
-        logger.warning("网络名称为空，请设置网络名称，程序将退出")
+        logger.warning("The network name is empty. Please set a network name; otherwise, the program will exit.")
         is_exit = True
 
     if cfg.LOSS.NAME is None:
-        logger.warning("损失函数名称为空，请设置损失函数名称，程序将退出")
+        logger.warning("The loss function name is empty. Please set the loss function name. The program will exit.")
         is_exit = True
 
     if cfg.OPTIMIZER.NAME is None:
-        logger.warning("优化器名称为空，请设置优化器名称，程序将退出")
+        logger.warning("The optimizer name is empty. Please set the optimizer name; otherwise, the program will exit.")
         is_exit = True
-
-    if cfg.FINETUNE.IS_FINETUNE:
-        if cfg.FINETUNE.BACKBONE is None:
-            logger.warning("微调骨干网络名称为空，请设置，程序将退出")
-            is_exit = True
-
-        if cfg.FINETUNE.TYPE is None:
-            logger.warning("微调类型为空，请设置微调类型，程序将退出")
-            is_exit = True
-        elif cfg.FINETUNE.TYPE == 'ic':
-            if cfg.FINETUNE.IC.HEAD is None:
-                logger.warning("微调IC分支头部名称为空，请设置，程序将退出")
-                is_exit = True
-
-            if cfg.FINETUNE.IC.LOSS is None:
-                logger.warning("微调IC分支损失函数名称为空，请设置，程序将退出")
-                is_exit = True
-        elif cfg.FINETUNE.TYPE == 'seg':
-            if cfg.FINETUNE.SEG.HEAD is None:
-                logger.warning("微调分割头部名称为空，请设置，程序将退出")
-                is_exit = True
-
-            if cfg.FINETUNE.SEG.LOSS is None:
-                logger.warning("微调分割损失函数名称为空，请设置，程序将退出")
-                is_exit = True
-        elif cfg.FINETUNE.TYPE == 'det':
-            if cfg.FINETUNE.DET.HEAD is None:
-                logger.warning("微调目标检测头部名称为空，请设置，程序将退出")
-                is_exit = True
-
-            if cfg.FINETUNE.DET.LOSS is None:
-                logger.warning("微调目标检测损失函数名称为空，请设置，程序将退出")
-                is_exit = True
-        elif cfg.FINETUNE.TYPE == 'cd':
-            if cfg.FINETUNE.CD.HEAD is None:
-                logger.warning("微调变化检测头部名称为空，请设置，程序将退出")
-                is_exit = True
-
-            if cfg.FINETUNE.CD.LOSS is None:
-                logger.warning("微调变化检测损失函数名称为空，请设置，程序将退出")
-                is_exit = True
-        else:
-            logger.warning("微调类型不支持，请设置微调类型，程序将退出")
-            is_exit = True
 
     if is_exit:
         sys.exit(1)

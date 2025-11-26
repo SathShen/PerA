@@ -10,7 +10,6 @@ from torch.cuda.amp import GradScaler
 import torch.distributed as dist
 from Utils.collate import *
 from functools import partial
-from Pretrain.knn_eval import knn_eval
 
 class PretrainFrame():
     def __init__(self, local_rank, cfg, num_dataset, logger):
@@ -31,8 +30,6 @@ class PretrainFrame():
         self.grad_accum_steps = cfg.GRADIENT_ACCUMULATION_STEPS
         self.best_rank_loss = 6657
         self.best_mean_loss = 6657
-        self.knn_top1acc = -1
-        self.knn_top5acc = -1
         self.best_knn_top1acc = -1
         self.best_knn_top5acc = -1
 
@@ -80,24 +77,6 @@ class PretrainFrame():
                                                             pin_memory=self.cfg.DATA.IS_PIN_MEMORY,
                                                             drop_last=True,
                                                             collate_fn=collate_fn)
-        elif self.cfg.NET.NAME == 'dinov2smuc':
-            patch_resolution = self.cfg.AUG.GLOBAL_CROP_SIZE // self.cfg.NET.PATCH_SIZE
-            mask_generator = MaskingGenerator(input_size=(patch_resolution, patch_resolution), 
-                                            max_num_patches=0.5 * patch_resolution * patch_resolution)
-            collate_fn = partial(
-                dinov2smuc_collate,
-                mask_ratio_tuple=self.cfg.NET.DINO.MASK_RATIO_TUPLE,
-                mask_probability=self.cfg.NET.DINO.MASK_PROBABILITY,
-                dtype=self.dtype,
-                n_tokens=patch_resolution * patch_resolution,
-                mask_generator=mask_generator)
-            train_data_loader = torch.utils.data.DataLoader(train_dataset, 
-                                                            batch_size=self.cfg.DATA.BATCH_SIZE_PER_GPU,
-                                                            sampler=train_sampler,
-                                                            num_workers=self.cfg.DATA.NUM_WORKERS,
-                                                            pin_memory=self.cfg.DATA.IS_PIN_MEMORY,
-                                                            drop_last=True,
-                                                            collate_fn=collate_fn)
         elif self.cfg.NET.NAME == 'pera':
             train_data_loader = torch.utils.data.DataLoader(train_dataset, 
                                                             batch_size=self.cfg.DATA.BATCH_SIZE_PER_GPU,
@@ -127,18 +106,6 @@ class PretrainFrame():
             images_dict = {}
             images_dict["global_crops"] = images["collated_global_crops"].cuda(non_blocking=True).to(self.dtype)
             images_dict["local_crops"] = images["collated_local_crops"].cuda(non_blocking=True).to(self.dtype)
-            images_dict["masks"] = images["collated_masks"].cuda(non_blocking=True)
-            images_dict["mask_indices_list"] = images["mask_indices_list"].cuda(non_blocking=True)
-            images_dict["num_masked"] = images["n_masked_patches"].cuda(non_blocking=True)
-            images_dict["upperbound"] = images["upperbound"]
-            images_dict["masks_weight"] = images["masks_weight"].cuda(non_blocking=True).to(self.dtype)
-            self.images = images_dict
-        elif self.cfg.NET.NAME == 'dinov2smuc':
-            images_dict = {}
-            images_dict["S_global_crops"] = images["S_collated_global_crops"].cuda(non_blocking=True).to(self.dtype)
-            images_dict["T_global_crops"] = images["T_collated_global_crops"].cuda(non_blocking=True).to(self.dtype)
-            images_dict["S_local_crops"] = images["S_collated_local_crops"].cuda(non_blocking=True).to(self.dtype)
-            images_dict["T_local_crops"] = images["T_collated_local_crops"].cuda(non_blocking=True).to(self.dtype)
             images_dict["masks"] = images["collated_masks"].cuda(non_blocking=True)
             images_dict["mask_indices_list"] = images["mask_indices_list"].cuda(non_blocking=True)
             images_dict["num_masked"] = images["n_masked_patches"].cuda(non_blocking=True)
@@ -178,7 +145,7 @@ class PretrainFrame():
         with autocast(dtype=self.dtype):
             loss_dict = None
             student_output, teacher_output = self.net(self.images)
-            if self.cfg.NET.NAME == 'dinov2' or self.cfg.NET.NAME == 'dinov2smuc':
+            if self.cfg.NET.NAME == 'dinov2':
                 loss, loss_dict = self.loss_fuc(student_output, teacher_output, self.teacher_temperature, self.images)
             elif self.cfg.NET.NAME == 'pera':
                 loss, loss_dict = self.loss_fuc(student_output, teacher_output, self.teacher_temperature)
@@ -211,19 +178,6 @@ class PretrainFrame():
             with torch.no_grad():
                 for param_q, param_k in zip(self.net.module.student.parameters(), self.net.module.teacher.parameters()):
                     param_k.data.mul_(self.teacher_momentum).add_((1 - self.teacher_momentum) * param_q.detach().data)
-                # if self.cfg.NET.NAME == 'pera':
-                #     for param_q, param_k in zip(self.net.module.student.backbone.parameters(), self.net.module.teacher.backbone.parameters()):
-                #         param_k.data.mul_(self.teacher_momentum).add_((1 - self.teacher_momentum) * param_q.detach().data)
-                #     for param_q, param_k in zip(self.net.module.student.cls_head.parameters(), self.net.module.teacher.cls_head.parameters()):
-                #         param_k.data.mul_(self.teacher_momentum).add_((1 - self.teacher_momentum) * param_q.detach().data)
-                #     for param_q, param_k in zip(self.net.module.student.patch_head.parameters(), self.net.module.teacher.patch_head.parameters()):
-                #         param_k.data.mul_(self.teacher_momentum).add_((1 - self.teacher_momentum) * param_q.detach().data)
-                #     # self.net.module.t_mask_token.data.mul_(self.teacher_momentum).add_((1 - self.teacher_momentum) * self.net.module.s_mask_token.detach().data)
-                # else:
-                #     # EMA for symmetrical model
-                #     for param_q, param_k in zip(self.net.module.student.parameters(), self.net.module.teacher.parameters()):
-                #         param_k.data.mul_(self.teacher_momentum).add_((1 - self.teacher_momentum) * param_q.detach().data)
-            
         self.it += 1
         return loss.detach()
             
@@ -251,16 +205,4 @@ class PretrainFrame():
         self.best_mean_loss = checkpoint['best_loss']
         del checkpoint
         self.logger.info(f"Checkpoint loaded from {checkpoint_path}")
-
-    def knn_eval(self):
-        if os.path.exists(self.cfg.DATA.TRAIN_DATA_PATH) and os.path.exists(self.cfg.DATA.VALID_DATA_PATH):
-            if dist.get_rank() == 0:
-                self.net_without_ddp.eval()
-                self.knn_top1acc, self.knn_top5acc, = knn_eval(self.cfg, self.net_without_ddp, self.dtype, self.logger)
-                if self.knn_top1acc > self.best_knn_top1acc:
-                    self.best_knn_top1acc = self.knn_top1acc
-                if self.knn_top5acc > self.best_knn_top5acc:
-                    self.best_knn_top5acc = self.knn_top5acc
-                self.net_without_ddp.train()
-
 
