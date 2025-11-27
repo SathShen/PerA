@@ -19,7 +19,7 @@ pip install -r requirements.txt
 
 ## 3. Prepare the dataset
 All pre-training data should be organized under a single folder. Images within all folders and subfolders will be automatically read.
-The RSRSD-5m dataset can be downloaded from [here](https://drive.google.com/drive/folders/1V57WZLFAna4l6jRPJff7qBoGuK-xr9Ci?usp=sharing) (google drive link) or [here](https://pan.baidu.com/s/18HOLQhJQ_Rlb3uirjLXLQw?pwd=pera) (Baidu Netdisk link).
+The RSRSD-5m dataset can be downloaded from [here](https://drive.google.com/drive/folders/1V57WZLFAna4l6jRPJff7qBoGuK-xr9Ci?usp=sharing) (google drive link) or [here](https://pan.baidu.com/s/18HOLQhJQ_Rlb3uirjLXLQw?pwd=pera) (Baidu Netdisk link, code: pera).
 
 
 ## 4. Pre-train the model
