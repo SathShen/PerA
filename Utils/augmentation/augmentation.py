@@ -12,9 +12,7 @@ import torchvision.transforms.functional as F
 import numbers
 import numpy as np
 
-# -------------------------------------------------------------
-#  Extended Transforms for Semantic Segmentation
-# -------------------------------------------------------------
+
 def interp_mode(method):
     if method == 'bicubic':
         return InterpolationMode.BICUBIC

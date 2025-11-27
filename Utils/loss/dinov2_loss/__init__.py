@@ -1,1 +1,1 @@
-from .dinov2_loss import DinoV2SmucLoss, DinoV2Loss
+from .dinov2_loss import DinoV2Loss
