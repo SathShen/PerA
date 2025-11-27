@@ -1,25 +1,22 @@
 import sys
 sys.path.append('./')
 import torch
-from Networks.distill_net import DistillNet
-from Networks.Finetune import *
-from Networks.Pretrain import DinoV1, DinoV2, DinoV2Smuc, PerA, MoCoV3, MAE
-from Networks.Pretrain.DinoV1.vision_transformer import VisionTransformer as DinoV1_VIT
-from Networks.Pretrain.DinoV2.vision_transformer import DinoV2VisionTransformer as DinoV2_VIT
-from Networks.Pretrain.MocoV3.vit_moco import VisionTransformerMoCo
-from Networks.Pretrain.MAE.mae_vit import MAEVisionTransformer
+from Networks import DinoV1, DinoV2, PerA, MoCoV3, MAE
+from Networks.DinoV1.vision_transformer import VisionTransformer as DinoV1_VIT
+from Networks.DinoV2.vision_transformer import DinoV2VisionTransformer as DinoV2_VIT
+from Networks.MoCoV3.vit_moco import VisionTransformerMoCo
+from Networks.MAE.mae_vit import MAEVisionTransformer
 
 from Utils.loss import *
 import numpy as np
 from Utils.dataset import *
-from Utils.metrics import *
 from Utils.augmentation import *
 # import deepspeed
 import time
 import logging
 import functools
 from termcolor import colored
-from Networks.Finetune.Heads.ObjectDetection.official_FasterRCNN import FasterRCNN
+
 
 
 class LARS(torch.optim.Optimizer):
@@ -155,29 +152,6 @@ def build_dataset(cfg, data_path, mode='Pretrain', is_aug=True):
     
     if mode == 'Pretrain':
         dataset = PretrainDataset(cfg, trans, data_path)
-    elif mode == 'KNN':
-        dataset = ImageClassificationDataset(cfg, trans, data_path)
-    elif mode == 'Finetune' or mode == 'Evaluate':
-        if cfg.FINETUNE.TYPE == 'ic':
-            dataset = ImageClassificationDataset(cfg, trans, data_path)
-        elif cfg.FINETUNE.TYPE == 'seg':
-            dataset = SemanticSegmentationDataset(cfg, trans, data_path)
-        elif cfg.FINETUNE.TYPE == 'det':
-            dataset = ObjectDetectionDataset(cfg, trans, data_path)
-        elif cfg.FINETUNE.TYPE == 'cd':
-            if cfg.FINETUNE.CD.NUM_CLASSES == 2:
-                dataset = ChangeDetectionDatasetSingle(cfg, trans, data_path)
-            else:
-                dataset = ChangeDetectionDatasetMulti(cfg, trans, data_path)
-        else:
-            raise ValueError('Wrong finetune type!')
-    elif mode == 'Inference':
-        if cfg.FINETUNE.TYPE == 'cd':
-            dataset = InferenceDatasetCD(cfg, trans, data_path)
-        elif cfg.FINETUNE.TYPE == 'seg':
-            dataset = InferenceDatasetSEG(cfg, trans, data_path)
-        else:
-            raise NotImplementedError('Inference not implemented yet!')
     else:
         raise NotImplementedError('Not implemented mode: {}'.format(mode))
     return dataset
@@ -186,9 +160,7 @@ def build_dataset(cfg, data_path, mode='Pretrain', is_aug=True):
 
 def build_net(cfg, is_pretrain=True):
     if is_pretrain == True:
-        if cfg.NET.NAME == 'dinov2smuc':
-            net = DinoV2Smuc(cfg)
-        elif cfg.NET.NAME == 'dinov1' or cfg.NET.NAME == 'dino':
+        if cfg.NET.NAME == 'dinov1' or cfg.NET.NAME == 'dino':
             net = DinoV1(cfg)
         elif cfg.NET.NAME == 'dinov2':
             net = DinoV2(cfg)
