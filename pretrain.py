@@ -6,6 +6,7 @@ from Utils import Timer, build_logger, build_dataset, set_seed
 from Utils.config import get_config, save_config, get_output_path, check_config
 import torch.distributed as dist
 import os
+import sys
 
 
 def pretrain(cfg, frame, pretrain_dataset, logger):

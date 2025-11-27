@@ -1,1 +1,1 @@
-from .dinov2 import DinoV2Smuc, DinoV2
+from .dinov2 import DinoV2

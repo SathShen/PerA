@@ -27,10 +27,10 @@ The pre-trained ViT-G/16-1024 weights of PerA can be downloaded from [here](http
 
 Run in the terminal, please adjust the command as needed, please use the recommended config file located in the “Configs” folder to ensure the program runs properly.Pretrain you model using following command:
 ```bash
-CUDA_VISIBLE_DEVICES=0,1 python -m torch.distributed.launch --nproc_per_node=8 --master_port 29999 pretrain.py -n pera -op output_path -pdp your_dataset -pp your_model.params -cfg your_config.yaml -cn your_note
+CUDA_VISIBLE_DEVICES=0,1 python -m torch.distributed.launch --nproc_per_node=2 --master_port 29999 pretrain.py -n pera -op output_path -pdp your_dataset -pp your_model.params -cfg your_config.yaml -cn your_note
 ```
 
 If you want to resume the pretrain code from the checkpoint, add -r True like following command:
 ```bash
-CUDA_VISIBLE_DEVICES=0,1 python -m torch.distributed.launch --nproc_per_node=8 --master_port 29999 pretrain.py -n pera -op output_path -pdp your_dataset -pp your_model.params -cfg your_config.yaml -r True -cn your_note
+CUDA_VISIBLE_DEVICES=0,1 python -m torch.distributed.launch --nproc_per_node=2 --master_port 29999 pretrain.py -n pera -op output_path -pdp your_dataset -pp your_model.params -cfg your_config.yaml -r True -cn your_note
 ```

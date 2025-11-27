@@ -1,7 +1,7 @@
 import torch
 import torch.nn.functional as F
 from .layers import PerA_cls_head, PerA_patch_head, PerA_pixel_head
-from Networks.Pretrain.DinoV2.vision_transformer import DinoV2VisionTransformer
+from Networks.DinoV2.vision_transformer import DinoV2VisionTransformer
 from torch import nn
 
 

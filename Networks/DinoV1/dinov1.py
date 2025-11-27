@@ -1,6 +1,6 @@
 import torch
 import torch.nn.functional as F
-from Networks.Pretrain.DinoV1.vision_transformer import VisionTransformer, DINOHead
+from Networks.DinoV1.vision_transformer import VisionTransformer, DINOHead
 from torch import nn
 from collections import defaultdict
 
