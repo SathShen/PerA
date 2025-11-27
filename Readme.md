@@ -1,7 +1,7 @@
 # PerA
 
 ## Introduction
-This repository implements PerA pre-training, fine-tuning, distillation, among others. The architecture of PerA is shown below:
+This repository implements PerA pre-training. Please refer to our paper: [A Contrastive Learning Foundation Model Based on Perfectly Aligned Sample Pairs for Remote Sensing Images](https://arxiv.org/abs/2505.19447) The architecture of PerA is shown below:
 ![image](./Utils/PerA_arch.png)
 
 ## 1. Clone the repository
