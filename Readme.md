@@ -10,7 +10,7 @@ git clone git@github.com:SathShen/PerA_dev.git
 ```
 
 ## 2. Install the required packages
-Python 3.9 is required, only available for Linux. We test our code with Cuda 12.1.
+Python 3.9 is required, only available for Linux. We test our code with Cuda>=12.1.
 
 Install dependencies:
 ```bash
