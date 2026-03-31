@@ -1,7 +1,7 @@
 # PerA
 
 ## Introduction
-This repository contains the official implementation of: [A Contrastive Learning Foundation Model Based on Perfectly Aligned Sample Pairs for Remote Sensing Images]([https://doi.org/10.1080/10095020.2026.2628435]) The architecture of PerA is shown below:
+This repository contains the official implementation of: [A Contrastive Learning Foundation Model Based on Perfectly Aligned Sample Pairs for Remote Sensing Images](https://doi.org/10.1080/10095020.2026.2628435) The architecture of PerA is shown below:
 ![image](./Utils/PerA_arch.png)
 
 ## 1. Clone the repository
